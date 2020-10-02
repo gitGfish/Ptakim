@@ -4,11 +4,21 @@ import { usePubNub } from 'pubnub-react';
 const channels = ['yeah'];
 
 
+
+
 function MainMenu() {
     const pubnub = usePubNub();
 
-    const activate = async () => {
-        await pubnub.addListener({
+    const logOut = () => {
+        window.addEventListener("beforeunload", (ev) => {
+            pubnub.unsubscribe({
+                channels: channels
+            })
+        });
+    };
+
+    useEffect(() => {
+        pubnub.addListener({
             presence: function(event) {
                 let action = event.action;
                 let channelName = event.channel;
@@ -21,25 +31,9 @@ function MainMenu() {
                 console.log(action);
             }
         });
-        await pubnub.subscribe({channels: channels});
-    }
-    useEffect(() => {
-        // pubnub.addListener({
-        //     presence: function(event) {
-        //         let action = event.action;
-        //         let channelName = event.channel;
-        //         let occupancy = event.occupancy;
-        //         let eventTimetoken = event.timetoken;
-        //         let occupantUUID = event.uuid;
-        //         let state = event.state;
-        //         let subscribeManager = event.subscription;
-        //         console.log(event);
-        //         console.log(action);
-        //     }
-        // });
-        //
-        // pubnub.subscribe({channels: channels});
-        activate();
+
+        pubnub.subscribe({channels: channels, withPresence: true});
+        logOut();
     }, []);
 
     const whoIsHere = () => {

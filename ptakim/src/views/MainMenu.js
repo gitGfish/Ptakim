@@ -1,6 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import { usePubNub } from 'pubnub-react';
 import Game from "./Game";
+import {Redirect} from "react-router-dom";
 
 
 
@@ -21,6 +22,7 @@ function MainMenu() {
     const [name, setName] = useState('');
     const [is_joining_game, setJoiningGame] = useState(false);
     const [joining_game_id, setJoiningGameId] = useState('please enter game id');
+    const [goto_lobby, setGotoLobby] = useState(false);
     const [game_id, setGameId] = useState('');
 
     useEffect(() => {
@@ -67,7 +69,8 @@ function MainMenu() {
         setGameId(game_id);
         await pubnub.subscribe({channels: [channel_name], withPresence: true});
         await setUserMetadata(true);
-        alert(`Game id is ${game_id}`);
+        setGotoLobby(true);
+        // alert(`Game id is ${game_id}`);
     }
 
     const joinGameClicked = () => {
@@ -92,6 +95,7 @@ function MainMenu() {
         }
         await pubnub.subscribe({channels: [channel_name], withPresence: true});
         await setUserMetadata(false);
+        setGotoLobby(true);
     }
 
     let comp = (
@@ -110,6 +114,7 @@ function MainMenu() {
             <button style={{flexGrow: 0}} onClick={hostGame}>Host</button>
             <button onClick={joinGameClicked}>Join</button>
             {is_joining_game ? (comp) : null}
+            {goto_lobby ? (<Redirect push to="lobby"/>) : null}
         </div>
     );
 }

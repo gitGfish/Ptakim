@@ -1,13 +1,19 @@
 import React, {useEffect} from 'react';
 import {usePubNub} from "pubnub-react";
 
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 
 function Lobby() {
     let pubnub = usePubNub();
 
     const testi = async () => {
-        let res = await pubnub.whereNow({uuid: pubnub.uuid})
+        await sleep(3000);
+        let res = await pubnub.whereNow({uuid: pubnub.getUUID()})
         console.log(res);
+        console.log(pubnub.getUUID());
     }
 
     useEffect(() => {

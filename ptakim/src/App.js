@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import MainMenu from "./views/MainMenu";
 import PubNub from 'pubnub';
 import { PubNubProvider} from 'pubnub-react';
@@ -21,7 +21,11 @@ const pubnub = new PubNub({
 
 
 function App() {
-    localStorage.clear();
+
+    useEffect(() => {
+        localStorage.clear();
+    }, []);
+
 
   return (
       <Router>

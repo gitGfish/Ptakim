@@ -2,93 +2,115 @@ import React, {useEffect, useState} from 'react';
 import { usePubNub } from 'pubnub-react';
 import Game from "./Game";
 
-const our_channels = ['yeah'];
 
 
+const global_active_games_channel = 'global_active_games_channel';
 
+function makeid(length) {
+    let result           = '';
+    let characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let charactersLength = characters.length;
+    for ( let i = 0; i < length; i++ ) {
+        result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    }
+    return result;
+}
 
 function MainMenu() {
     const pubnub = usePubNub();
     const [name, setName] = useState('');
-    const [game_joined, setGameJoined] = useState('');
-    const [showGame, setShowGame] = useState(false);
-
+    const [is_joining_game, setJoiningGame] = useState(false);
+    const [joining_game_id, setJoiningGameId] = useState('please enter game id');
+    const [game_id, setGameId] = useState('');
 
     useEffect(() => {
     }, []);
+
+    const setUserMetadata = (host) => {
+        pubnub.objects.setUUIDMetadata({
+            data: {
+                name: name,
+                custom: {
+                    host: host
+                }
+            }
+        });
+    }
 
     const hostGame = async () => {
         if(name === ''){
             alert('please enter name!');
             return;
         }
-        await pubnub.setUUID(name);
-        let channel_name = `${name}_game`;
+        let i;
+        let game_id = 'null';
+        let channel_name;
+        for(i = 0; i < 3; i++){
+            let tmp_game_id = makeid(5)
+            let tmp_channel_name = `${tmp_game_id}_game`;
+            let channel_status = await pubnub.hereNow(
+                {
+                    channels: [tmp_channel_name]
+                }
+            )
+            let occupancy = channel_status.totalOccupancy
+            if(occupancy === 0){
+                game_id = tmp_game_id;
+                channel_name = tmp_channel_name;
+                break;
+            }
+        }
+        if(game_id === 'null'){
+            alert('cant host game!!');
+            return;
+        }
+        setGameId(game_id);
         await pubnub.subscribe({channels: [channel_name], withPresence: true});
-        setShowGame(true);
+        await setUserMetadata(true);
+        alert(`Game id is ${game_id}`);
     }
 
-    const checkIsName = () => {
+    const joinGameClicked = () => {
+        setJoiningGame(true);
+    }
+
+    const joinGame = async () => {
         if(name === ''){
             alert('please enter name!');
-            return false;
+            return;
         }
-        return true;
-    }
-
-    const joinGame = () => {
-        setGameJoined('Enter game id');
-    }
-
-
-    const joinGameWithChecking = () => {
-        pubnub.hereNow(
+        let channel_name = `${joining_game_id}_game`;
+        let channel_status = await pubnub.hereNow(
             {
-                channels: [game_joined]
-            },
-            function (status, response) {
-                if(!checkIsName()){
-                    return;
-                }
-                let occupants_list = response.channels[game_joined].occupants.map((occ) => {
-                    return occ.uuid
-                })
-                if(occupants_list.length < 1) {
-                    alert('This is not an active game!');
-                    return;
-                }
-                pubnub.subscribe({channels: [game_joined], withPresence: true});
-                setShowGame(true);
+                channels: [channel_name]
             }
         )
-    }
-
-    const joinGamePressed = async () => {
-        joinGameWithChecking();
+        let occupancy = channel_status.totalOccupancy
+        if(occupancy === 0){
+            alert('Not an active game! please enter different code!');
+            return;
+        }
+        await pubnub.subscribe({channels: [channel_name], withPresence: true});
+        await setUserMetadata(false);
     }
 
     let comp = (
         <div>
-            <input value={game_joined} onChange={(e) => {setGameJoined(e.target.value)}}/>
-            <button onClick={joinGamePressed}>JOIN</button>
+            <input value={joining_game_id} onChange={(e) => {setJoiningGameId(e.target.value)}}/>
+            <button onClick={joinGame}>JOIN</button>
         </div>
     )
 
     return (
-        <div>
-            {showGame ? (<Game channel={game_joined? (game_joined) : (`${name}_game`)}/>) : (
-                <div style={{display: 'flex', flexDirection:'column' ,justifyContent: 'center', alignItems:'space-between', minHeight: 250, minWidth: 250,border:'solid'}}>
-                    <div style={{display: 'flex', flexDirection:'row', flexGrow:0, justifyContent:'center'}}>
-                        <h3>Enter your name -> </h3>
-                        <input value={name} onChange={(e) => setName(e.target.value)}/>
-                    </div>
-                    <button style={{flexGrow: 0}} onClick={hostGame}>Host</button>
-                    <button onClick={joinGame}>Join</button>
-                    {game_joined ? (comp) : null}
-                </div>
-            )}
+        <div style={{display: 'flex', flexDirection:'column' ,justifyContent: 'center', alignItems:'space-between', minHeight: 250, minWidth: 250,border:'solid'}}>
+            <div style={{display: 'flex', flexDirection:'row', flexGrow:0, justifyContent:'center'}}>
+                <h3>Enter your name -> </h3>
+                <input value={name} onChange={(e) => setName(e.target.value)}/>
+            </div>
+            <button style={{flexGrow: 0}} onClick={hostGame}>Host</button>
+            <button onClick={joinGameClicked}>Join</button>
+            {is_joining_game ? (comp) : null}
         </div>
-
     );
 }
 
